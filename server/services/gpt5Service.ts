@@ -1,0 +1,234 @@
+import OpenAI from 'openai';
+import type { VisionResponse, AnalyzeResponse, Facility } from '../types.js';
+
+// Lazy initialization of OpenAI client
+function getOpenAIClient() {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY is not set in environment variables');
+  }
+  return new OpenAI({ apiKey });
+}
+
+/**
+ * Parses a location string to extract city, region, and country
+ * Handles formats like "Ithaca, NY 14850", "San Francisco, CA", "London, UK", etc.
+ */
+function parseLocation(location: string): {
+  city?: string;
+  region?: string;
+  country?: string;
+} {
+  const trimmed = location.trim();
+  
+  // Try to extract components
+  // Common patterns:
+  // - "City, State ZIP" (US)
+  // - "City, State" (US)
+  // - "City, Country"
+  // - "City, Region, Country"
+  // - Just ZIP code
+  
+  // For US locations, try to extract state
+  const usStatePattern = /\b([A-Z]{2})\b/;
+  const stateMatch = trimmed.match(usStatePattern);
+  
+  // Try to split by comma
+  const parts = trimmed.split(',').map(p => p.trim());
+  
+  if (parts.length >= 2) {
+    const city = parts[0];
+    const secondPart = parts[1];
+    
+    // Check if second part is a US state (2 letters)
+    if (stateMatch && secondPart.length <= 3) {
+      return {
+        city,
+        region: secondPart,
+        country: 'US',
+      };
+    }
+    
+    // Otherwise, treat as region/country
+    if (parts.length >= 3) {
+      return {
+        city: parts[0],
+        region: parts[1],
+        country: parts[2],
+      };
+    }
+    
+    return {
+      city,
+      region: secondPart,
+    };
+  }
+  
+  // If it's just a ZIP code or single word, return as city
+  if (trimmed.length <= 10 && /^\d+/.test(trimmed)) {
+    // Likely a ZIP code
+    return {
+      city: trimmed,
+      country: 'US',
+    };
+  }
+  
+  return {
+    city: trimmed,
+  };
+}
+
+/**
+ * Extracts JSON from response text
+ */
+function extractJSONFromResponse(content: string): any {
+  // Try to find JSON in the response
+  const jsonMatch = content.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    try {
+      return JSON.parse(jsonMatch[0]);
+    } catch (e) {
+      // If parsing fails, try to extract more carefully
+    }
+  }
+
+  // Fallback: try parsing the entire content
+  try {
+    return JSON.parse(content);
+  } catch (e) {
+    throw new Error('Failed to parse JSON from assistant response');
+  }
+}
+
+/**
+ * Analyzes recyclability using Responses API with web search for facilities
+ */
+export async function analyzeRecyclability(
+  visionResult: VisionResponse,
+  context: string,
+  location: string
+): Promise<AnalyzeResponse> {
+  try {
+    const openai = getOpenAIClient();
+    
+    // Parse location for user_location parameter
+    const parsedLocation = parseLocation(location);
+    
+    // Build user_location object for web_search
+    const userLocation: any = {
+      type: 'approximate' as const,
+    };
+    
+    if (parsedLocation.city) {
+      userLocation.city = parsedLocation.city;
+    }
+    if (parsedLocation.region) {
+      userLocation.region = parsedLocation.region;
+    }
+    if (parsedLocation.country) {
+      userLocation.country = parsedLocation.country;
+    }
+    
+    // Prepare the input prompt
+    const input = `You are a recycling and disposal assistant. Analyze this item for recyclability:
+
+Material Analysis:
+- Primary Material: ${visionResult.primaryMaterial}
+- Category: ${visionResult.category}
+- Condition: ${visionResult.condition}
+- Contaminants: ${visionResult.contaminants.join(', ') || 'None'}
+- Description: ${visionResult.shortDescription}
+
+User Context: ${context || 'None provided'}
+
+User Location: ${location}
+
+Please:
+1. Determine if this item is recyclable (true/false)
+2. Identify the category it belongs to
+3. Determine which bin it should go in (recycling, landfill, compost, hazardous, or unknown)
+4. Provide clear, step-by-step instructions for proper disposal
+5. Use web search to find 3-5 nearby recycling and disposal facilities in ${location}
+6. Return your complete analysis as a JSON object matching this exact structure:
+{
+  "isRecyclable": boolean,
+  "category": string,
+  "bin": "recycling" | "landfill" | "compost" | "hazardous" | "unknown",
+  "confidence": number (0-1),
+  "materialDescription": string (optional),
+  "instructions": string[],
+  "reasoning": string,
+  "locationUsed": string,
+  "facilities": [{
+    "name": string,
+    "type": string,
+    "address": string,
+    "url": string,
+    "notes": string
+  }]
+}
+
+Search for queries like "recycling facilities ${location}" or "${visionResult.primaryMaterial} disposal ${location}" to find local facilities.`;
+
+    // Build tools array with web_search
+    const tools: any[] = [
+      {
+        type: 'web_search' as const,
+      },
+    ];
+    
+    // Add user_location if we have valid location data (more than just type)
+    if (Object.keys(userLocation).length > 1) {
+      tools[0].user_location = userLocation;
+    }
+    
+    // Call Responses API with web_search tool
+    const response = await openai.responses.create({
+      model: 'gpt-4o', // or 'gpt-5' if available
+      tools: tools,
+      input: input,
+    });
+
+    // Extract output text from response
+    // Responses API returns output_text directly
+    const outputText = response.output_text || '';
+    
+    if (!outputText) {
+      throw new Error('No output text from Responses API');
+    }
+
+    // Parse JSON from response
+    const parsed = extractJSONFromResponse(outputText);
+
+    // Validate and structure the response
+    const facilities: Facility[] = Array.isArray(parsed.facilities)
+      ? parsed.facilities.map((f: any) => ({
+          name: f.name || 'Unknown Facility',
+          type: f.type || 'Recycling Center',
+          address: f.address || 'Address not available',
+          url: f.url || '#',
+          notes: f.notes || '',
+        }))
+      : [];
+
+    // Limit to 5 facilities
+    const limitedFacilities = facilities.slice(0, 5);
+
+    return {
+      isRecyclable: Boolean(parsed.isRecyclable),
+      category: parsed.category || visionResult.category,
+      bin: parsed.bin || 'unknown',
+      confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5,
+      materialDescription: parsed.materialDescription || visionResult.shortDescription,
+      instructions: Array.isArray(parsed.instructions) ? parsed.instructions : [],
+      reasoning: parsed.reasoning || 'Analysis completed',
+      locationUsed: parsed.locationUsed || location,
+      facilities: limitedFacilities,
+    };
+  } catch (error) {
+    console.error('GPT-5 service error:', error);
+    throw new Error(
+      `Failed to analyze recyclability: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
+  }
+}
