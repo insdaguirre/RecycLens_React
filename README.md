@@ -74,6 +74,22 @@ The frontend will start on `http://localhost:5173` (or another port if 5173 is t
 
 Navigate to `http://localhost:5173` to use the application.
 
+## Deployment
+
+### Railway Deployment
+
+RecycLens is configured for easy deployment on Railway. See [RAILWAY_DEPLOY.md](./RAILWAY_DEPLOY.md) for detailed deployment instructions.
+
+**Quick Steps:**
+1. Connect your GitHub repository to Railway
+2. Add environment variables:
+   - `OPENAI_API_KEY`
+   - `VITE_MAPBOX_ACCESS_TOKEN`
+   - `NODE_ENV=production`
+3. Railway will automatically build and deploy
+
+The application will be available at a Railway-provided URL (e.g., `https://your-app.railway.app`).
+
 ## How It Works
 
 1. **User uploads an image** of an item they want to recycle
