@@ -96,99 +96,66 @@ The application will be available at a Railway-provided URL (e.g., `https://your
 
 ### System Architecture & Information Flow
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         User Interface                           │
-│  (React + Vite + Tailwind CSS)                                  │
-│                                                                  │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐         │
-│  │   Location   │  │    Image     │  │   Context    │         │
-│  │   Input      │  │   Upload     │  │   (Optional) │         │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘         │
-│         │                  │                  │                  │
-│         └──────────────────┴──────────────────┘                 │
-│                            │                                    │
-│                            ▼                                    │
-│                   POST /api/analyze                             │
-└────────────────────────────┼────────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    Express Backend Server                       │
-│                    (Node.js + TypeScript)                      │
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │              POST /api/analyze Handler                   │  │
-│  │  (server/routes/analyze.ts)                                │  │
-│  └──────────────┬───────────────────────────────────────────┘  │
-│                 │                                                │
-│                 ├──────────────────┐                              │
-│                 │                  │                              │
-│                 ▼                  ▼                            │
-│  ┌──────────────────────┐  ┌──────────────────────┐           │
-│  │  Vision Service      │  │  Responses Service    │           │
-│  │  (visionService.ts)  │  │  (gpt5Service.ts)    │           │
-│  └──────────┬───────────┘  └──────────┬───────────┘           │
-└──────────────┼────────────────────────┼──────────────────────────┘
-               │                        │
-               ▼                        ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    OpenAI API Services                          │
-│                                                                  │
-│  ┌──────────────────────────┐  ┌──────────────────────────┐   │
-│  │   GPT-4o Vision API     │  │  GPT-4o Responses API    │   │
-│  │                          │  │  (with web_search tool)   │   │
-│  │  • Image Analysis        │  │                          │   │
-│  │  • Material ID          │  │  • Recyclability Decision │   │
-│  │  • Condition Assessment  │  │  • Disposal Instructions │   │
-│  │  • Contaminant Detection│  │  • Facility Lookup        │   │
-│  │                          │  │    (via web search)       │   │
-│  └──────────┬───────────────┘  └──────────┬───────────────┘   │
-│             │                              │                    │
-│             │                              │                    │
-│             │         ┌───────────────────┘                    │
-│             │         │                                         │
-│             │         ▼                                         │
-│             │  ┌──────────────────────┐                        │
-│             │  │   Web Search Tool    │                        │
-│             │  │  (OpenAI Responses)  │                        │
-│             │  │  • Find facilities  │                        │
-│             │  │  • Local regulations│                        │
-│             │  └──────────────────────┘                        │
-│             │                                                   │
-└─────────────┼───────────────────────────────────────────────────┘
-              │
-              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    Response Processing                         │
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │  Combine Vision + Responses API Results                 │  │
-│  │  • isRecyclable (boolean)                                 │  │
-│  │  • category, bin, confidence                              │  │
-│  │  • step-by-step instructions                              │  │
-│  │  • facilities[] (name, address, type, url, notes)         │  │
-│  └──────────┬───────────────────────────────────────────────┘  │
-└─────────────┼───────────────────────────────────────────────────┘
-              │
-              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    Frontend Display                            │
-│                                                                  │
-│  ┌──────────────────┐  ┌──────────────────┐                   │
-│  │  Results Panel  │  │  Facility Map    │                   │
-│  │  • Recyclability │  │  (Mapbox GL)     │                   │
-│  │  • Instructions │  │  • Markers       │                   │
-│  │  • Reasoning    │  │  • Geocoding     │                   │
-│  └──────────────────┘  └──────────────────┘                   │
-│                                                                  │
-│  ┌──────────────────┐                                          │
-│  │  Facility Cards  │                                          │
-│  │  • Name, Address │                                          │
-│  │  • Type, Notes   │                                          │
-│  │  • External Link │                                          │
-│  └──────────────────┘                                          │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph UI["User Interface (React + Vite + Tailwind CSS)"]
+        Location["Location Input"]
+        Image["Image Upload"]
+        Context["Context (Optional)"]
+    end
+    
+    subgraph Backend["Express Backend Server (Node.js + TypeScript)"]
+        Handler["POST /api/analyze Handler<br/>(server/routes/analyze.ts)"]
+        VisionService["Vision Service<br/>(visionService.ts)"]
+        ResponsesService["Responses Service<br/>(gpt5Service.ts)"]
+    end
+    
+    subgraph OpenAI["OpenAI API Services"]
+        VisionAPI["GPT-4o Vision API<br/>• Image Analysis<br/>• Material ID<br/>• Condition Assessment<br/>• Contaminant Detection"]
+        ResponsesAPI["GPT-4o Responses API<br/>• Recyclability Decision<br/>• Disposal Instructions<br/>• Facility Lookup"]
+        WebSearch["Web Search Tool<br/>(OpenAI Responses)<br/>• Find facilities<br/>• Local regulations"]
+    end
+    
+    subgraph Processing["Response Processing"]
+        Combine["Combine Vision + Responses API Results<br/>• isRecyclable (boolean)<br/>• category, bin, confidence<br/>• step-by-step instructions<br/>• facilities[]"]
+    end
+    
+    subgraph Display["Frontend Display"]
+        ResultsPanel["Results Panel<br/>• Recyclability<br/>• Instructions<br/>• Reasoning"]
+        FacilityMap["Facility Map (Mapbox GL)<br/>• Markers<br/>• Geocoding"]
+        FacilityCards["Facility Cards<br/>• Name, Address<br/>• Type, Notes<br/>• External Link"]
+    end
+    
+    subgraph Mapbox["Mapbox Services"]
+        Geocoding["Geocoding API<br/>(Address → Coordinates)"]
+    end
+    
+    Location --> Handler
+    Image --> Handler
+    Context --> Handler
+    
+    Handler --> VisionService
+    Handler --> ResponsesService
+    
+    VisionService --> VisionAPI
+    ResponsesService --> ResponsesAPI
+    ResponsesAPI --> WebSearch
+    
+    VisionAPI --> Combine
+    ResponsesAPI --> Combine
+    
+    Combine --> ResultsPanel
+    Combine --> FacilityMap
+    Combine --> FacilityCards
+    
+    FacilityMap --> Geocoding
+    
+    style UI fill:#e1f5e1
+    style Backend fill:#e3f2fd
+    style OpenAI fill:#fff3e0
+    style Processing fill:#f3e5f5
+    style Display fill:#e8f5e9
+    style Mapbox fill:#e0f2f1
 ```
 
 ### Process Flow
