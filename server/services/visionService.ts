@@ -19,27 +19,40 @@ export async function analyzeImage(imageBase64: string): Promise<VisionResponse>
 
   try {
     const openai = getOpenAIClient();
-    
-    // Prepare input for Responses API
-    // Include image as data URL in the input
-    const input = `You are a recycling materials expert. Analyze the image and identify the primary material(s) and recycling-relevant condition. Return your response as a JSON object with the following structure: {primaryMaterial: string, secondaryMaterials: string[], category: string, condition: string, contaminants: string[], confidence: number (0-1), shortDescription: string}
-
-Analyze this image and return the material analysis as JSON.
-
-[Image: data:image/jpeg;base64,${base64Data}]`;
-
-    const response = await openai.responses.create({
+    const response = await openai.chat.completions.create({
       model: 'gpt-4.1-2025-04-14',
-      input: input,
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a recycling materials expert. Analyze the image and identify the primary material(s) and recycling-relevant condition. Return your response as a JSON object with the following structure: {primaryMaterial: string, secondaryMaterials: string[], category: string, condition: string, contaminants: string[], confidence: number (0-1), shortDescription: string}',
+        },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: 'Analyze this image and return the material analysis as JSON.',
+            },
+            {
+              type: 'image_url',
+              image_url: {
+                url: `data:image/jpeg;base64,${base64Data}`,
+              },
+            },
+          ],
+        },
+      ],
+      response_format: { type: 'json_object' },
+      max_tokens: 500,
     });
 
-    const outputText = response.output_text || '';
-    if (!outputText) {
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
       throw new Error('No response from vision API');
     }
 
     // Parse JSON response
-    const parsed = JSON.parse(outputText);
+    const parsed = JSON.parse(content);
     
     // Validate and return structured response
     return {
