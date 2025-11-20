@@ -14,7 +14,7 @@ An AI-powered recycling assistant that helps users identify recyclable items and
 
 - **Frontend**: React + TypeScript + Vite + Tailwind CSS
 - **Backend**: Node.js + Express + TypeScript
-- **AI Services**: OpenAI Chat Completions API (GPT-4.1) for image analysis + OpenAI Responses API (GPT-4.1 with web search) for recyclability
+- **AI Services**: OpenAI Responses API (GPT-4.1) for image analysis + OpenAI Responses API (GPT-4.1 with web search) for recyclability
 - **Maps**: Mapbox GL JS + React Map GL + Mapbox Geocoding API
 
 ## Prerequisites
@@ -111,7 +111,7 @@ flowchart TD
     end
     
     subgraph OpenAI["OpenAI API Services"]
-        VisionAPI["GPT-4.1 Chat Completions API<br/>• Image Analysis<br/>• Material ID<br/>• Condition Assessment<br/>• Contaminant Detection"]
+        VisionAPI["GPT-4.1 Responses API<br/>• Image Analysis<br/>• Material ID<br/>• Condition Assessment<br/>• Contaminant Detection"]
         ResponsesAPI["GPT-4.1 Responses API<br/>• Recyclability Decision<br/>• Disposal Instructions<br/>• Facility Lookup"]
         WebSearch["Web Search Tool<br/>(OpenAI Responses)<br/>• Find facilities<br/>• Local regulations"]
     end
@@ -161,7 +161,7 @@ flowchart TD
 ### Process Flow
 
 1. **User Input**: User uploads an image, enters location, and optionally adds context
-2. **Image Analysis**: GPT-4.1 Chat Completions API analyzes the image to identify:
+2. **Image Analysis**: GPT-4.1 Responses API analyzes the image to identify:
    - Primary and secondary materials
    - Item condition (clean, soiled, damaged, etc.)
    - Contaminants (food residue, grease, etc.)
@@ -282,7 +282,7 @@ RecycLens/
 ### API errors
 
 - Verify your OpenAI API key is valid and has credits
-- Check that you have access to Chat Completions API (GPT-4.1) for image analysis and Responses API (GPT-4.1) with web search tool
+- Check that you have access to Responses API (GPT-4.1) for both image analysis and recyclability with web search tool
 - Review server logs for detailed error messages
 - Ensure your OpenAI account has access to the web search tool
 
@@ -304,7 +304,7 @@ RecycLens/
 
 - **Backend Architecture**: Express server serves both API routes and static frontend files in production
 - **AI Integration**: 
-  - GPT-4.1 Chat Completions API handles image analysis for material identification
+  - GPT-4.1 Responses API handles image analysis for material identification
   - GPT-4.1 Responses API with `web_search` tool handles recyclability decisions and facility lookup
 - **Frontend**: 
   - Development: Vite dev server with proxy to backend
