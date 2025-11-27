@@ -50,7 +50,11 @@ def nav_bar():
         ui.div(
             ui.input_action_link(
                 "nav_logo",
-                ui.span("RecycLens", class_="text-xl font-light tracking-tight"),
+                ui.div(
+                    ui.span("♻️", class_="text-xl"),
+                    ui.span("RecycLens", class_="text-xl font-light tracking-tight"),
+                    class_="flex items-center space-x-2"
+                ),
                 class_="nav-logo-link"
             ),
             ui.div(
@@ -63,7 +67,7 @@ def nav_bar():
             ),
             class_="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between"
         ),
-        class_="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50"
+        class_="navbar-container bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50"
     )
 
 
@@ -183,18 +187,17 @@ def input_form():
 
 
 def facility_map_section():
-    """Facility map and cards section."""
+    """Facility cards section."""
     return ui.div(
         ui.h2(
             "Nearby Recycling Facilities",
             class_="text-4xl font-light text-gray-900 mb-8 text-center"
         ),
         ui.div(
-            ui.output_ui("facility_map"),
             ui.output_ui("facility_cards"),
             class_="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden"
         ),
-        class_="mt-20"
+        class_="mt-16"
     )
 
 
@@ -370,6 +373,46 @@ app_ui = ui.page_fluid(
             document.addEventListener('shiny:connected', setupFileUpload);
             document.addEventListener('shiny:value', setupFileUpload);
         }
+        
+        // Show progress indicator immediately on button click
+        function setupProgressIndicator() {
+            // Use event delegation to handle dynamically created buttons
+            document.addEventListener('click', function(e) {
+                const button = e.target.closest('[id*="check_button"]');
+                if (button) {
+                    // Find the progress indicator output container
+                    setTimeout(function() {
+                        const progressOutput = document.querySelector('[id*="progress_indicator"]');
+                        if (progressOutput) {
+                            // Check if it's already showing (to avoid duplicate)
+                            if (!progressOutput.querySelector('.analyzing-indicator')) {
+                                progressOutput.innerHTML = `
+                                    <div class="mb-6 analyzing-indicator">
+                                        <div class="flex items-center text-green-600">
+                                            <span class="animate-spin">⏳</span>
+                                            <span class="ml-2">Analyzing...</span>
+                                        </div>
+                                    </div>
+                                `;
+                                progressOutput.style.display = 'block';
+                            }
+                        }
+                    }, 10);
+                }
+            });
+        }
+        
+        // Setup progress indicator
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupProgressIndicator);
+        } else {
+            setupProgressIndicator();
+        }
+        
+        // Re-setup after Shiny updates
+        if (window.Shiny) {
+            document.addEventListener('shiny:connected', setupProgressIndicator);
+        }
     """),
     nav_bar(),
     ui.div(
@@ -437,7 +480,7 @@ def server(input, output, session):
                     ),
                     class_="max-w-7xl mx-auto px-6"
                 ),
-                facility_map_section(),
+                ui.output_ui("facilities_section"),
                 class_="max-w-7xl mx-auto px-6"
             )
     
@@ -459,7 +502,9 @@ def server(input, output, session):
     @render.ui
     def remove_image_ui():
         """Remove image button."""
-        if input.image() is None or len(input.image()) == 0:
+        # Use reactive value instead of direct input check
+        # This persists during analysis when input.image() might be temporarily None
+        if image_preview_data.get() is None:
             return None
         
         return ui.div(
@@ -487,22 +532,19 @@ def server(input, output, session):
     @output
     @render.ui
     def progress_indicator():
-        """Display progress indicator based on current stage."""
+        """Display progress indicator while analysis is in progress."""
         stage = analysis_stage.get()
-        if stage == STAGE_IDLE:
+        
+        # Show "Analyzing..." for any active analysis stage
+        # Hide when idle, complete, or error
+        if stage == STAGE_IDLE or stage == STAGE_COMPLETE or stage == STAGE_ERROR:
             return None
         
-        stage_labels = {
-            STAGE_ANALYZING_IMAGE: "Analyzing image...",
-            STAGE_ANALYZING_RECYCLABILITY: "Checking recyclability...",
-            STAGE_GEOCODING: "Finding facilities...",
-        }
-        label = stage_labels.get(stage, "Analyzing...")
-        
+        # Show single "Analyzing..." message for all analysis stages
         return ui.div(
             ui.div(
                 ui.span("⏳", class_="animate-spin"),
-                ui.span(label, class_="ml-2"),
+                ui.span("Analyzing...", class_="ml-2"),
                 class_="flex items-center text-green-600"
             ),
             class_="mb-6"
@@ -518,34 +560,39 @@ def server(input, output, session):
         analysis_result.set(None)
         vision_result.set(None)
         
+        # Set stage immediately (JavaScript will show it, but this ensures server state is correct)
+        analysis_stage.set(STAGE_ANALYZING_IMAGE)
+        
         # Validation
         file_info = input.image()
         location = input.location()
         
         if file_info is None or len(file_info) == 0:
             error_message.set("Please upload an image")
+            analysis_stage.set(STAGE_IDLE)
             return
         
         if not location or not location.strip():
             error_message.set("Please enter your location")
+            analysis_stage.set(STAGE_IDLE)
             return
         
         try:
             # Stage 1: Analyze image
-            analysis_stage.set(STAGE_ANALYZING_IMAGE)
             image_base64 = convert_image_to_base64(file_info[0])
             vision_res = await analyze_vision(image_base64)
             vision_result.set(vision_res)
             
             # Stage 2: Analyze recyclability
             analysis_stage.set(STAGE_ANALYZING_RECYCLABILITY)
+            await asyncio.sleep(0.1)
             context = input.context() or ""
             analysis_res = await analyze_recyclability(vision_res, location.strip(), context)
             analysis_result.set(analysis_res)
             
             # Stage 3: Geocoding (happens in frontend)
             analysis_stage.set(STAGE_GEOCODING)
-            await asyncio.sleep(0.5)  # Brief delay for UX
+            await asyncio.sleep(0.5)
             
             # Complete
             analysis_stage.set(STAGE_COMPLETE)
@@ -554,6 +601,8 @@ def server(input, output, session):
             analysis_stage.set(STAGE_ERROR)
             error_message.set(f"Analysis failed: {str(e)}")
             print(f"Analysis error: {e}")
+            import traceback
+            traceback.print_exc()
     
     @output
     @render.ui
@@ -637,34 +686,6 @@ def server(input, output, session):
     
     @output
     @render.ui
-    def facility_map():
-        """Display facility map with Mapbox."""
-        result = analysis_result.get()
-        if result is None:
-            return ui.div(
-                ui.p(
-                    "Upload an item to find nearby facilities",
-                    class_="text-gray-400"
-                ),
-                class_="h-96 bg-gradient-to-br from-green-50 to-blue-50 rounded-2xl flex items-center justify-center"
-            )
-        
-        facilities = result.get("facilities", [])
-        if not facilities:
-            return ui.div(
-                ui.p(
-                    "No facilities found for this location",
-                    class_="text-gray-400"
-                ),
-                class_="h-96 bg-gradient-to-br from-green-50 to-blue-50 rounded-2xl flex items-center justify-center"
-            )
-        
-        # Generate Mapbox map HTML
-        map_html = generate_mapbox_html(facilities, MAPBOX_TOKEN)
-        return ui.HTML(map_html)
-    
-    @output
-    @render.ui
     def facility_cards():
         """Display facility cards."""
         result = analysis_result.get()
@@ -719,117 +740,26 @@ def server(input, output, session):
         
         return ui.div(
             *cards,
-            class_="p-8 grid grid-cols-1 md:grid-cols-3 gap-4"
+            class_="px-8 pt-4 pb-8 grid grid-cols-1 md:grid-cols-3 gap-4"
         )
-
-
-def generate_mapbox_html(facilities: list, token: str) -> str:
-    """Generate HTML/JavaScript for Mapbox map."""
-    if not token:
-        return '<div class="h-96 bg-gradient-to-br from-green-50 to-blue-50 rounded-2xl flex items-center justify-center"><p class="text-gray-400">Mapbox token not configured</p></div>'
     
-    # Convert facilities to JavaScript array
-    facilities_js = []
-    for facility in facilities:
-        facilities_js.append({
-            "name": facility.get("name", ""),
-            "address": facility.get("address", ""),
-            "type": facility.get("type", ""),
-            "url": facility.get("url", ""),
-            "coordinates": facility.get("coordinates", None)
-        })
-    
-    facilities_json = str(facilities_js).replace("'", '"')
-    
-    return f'''
-    <div id="map" class="h-96 rounded-2xl overflow-hidden relative"></div>
-    <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
-    <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
-    <script>
-        mapboxgl.accessToken = '{token}';
-        const facilities = {facilities_json};
-        const map = new mapboxgl.Map({{
-            container: 'map',
-            style: 'mapbox://styles/mapbox/light-v11',
-            center: [-98.5795, 39.8283],
-            zoom: 3
-        }});
+    @output
+    @render.ui
+    def facilities_section():
+        """Display facilities section only when facilities are available."""
+        result = analysis_result.get()
+        if result is None:
+            return None
         
-        // Geocode facilities and add markers
-        async function geocodeAndAddMarkers() {{
-            const geocodePromises = facilities.map(async (facility) => {{
-                if (facility.coordinates && facility.coordinates.length === 2) {{
-                    return {{
-                        ...facility,
-                        lng: facility.coordinates[0],
-                        lat: facility.coordinates[1]
-                    }};
-                }}
-                try {{
-                    const response = await fetch(
-                        `https://api.mapbox.com/geocoding/v5/mapbox.places/${{encodeURIComponent(facility.address)}}.json?access_token=${{mapboxgl.accessToken}}`
-                    );
-                    const data = await response.json();
-                    if (data.features && data.features.length > 0) {{
-                        const [lng, lat] = data.features[0].center;
-                        return {{
-                            ...facility,
-                            lng: lng,
-                            lat: lat
-                        }};
-                    }}
-                }} catch (error) {{
-                    console.error('Geocoding error:', error);
-                }}
-                return null;
-            }});
-            
-            const facilitiesWithCoords = (await Promise.all(geocodePromises)).filter(f => f !== null);
-            if (facilitiesWithCoords.length === 0) return;
-            
-            // Calculate bounds
-            const lngs = facilitiesWithCoords.map(f => f.lng);
-            const lats = facilitiesWithCoords.map(f => f.lat);
-            const bounds = new mapboxgl.LngLatBounds();
-            facilitiesWithCoords.forEach(f => bounds.extend([f.lng, f.lat]));
-            map.fitBounds(bounds, {{ padding: 50 }});
-            
-            // Add markers
-            facilitiesWithCoords.forEach((facility, index) => {{
-                const el = document.createElement('div');
-                el.className = 'marker';
-                el.style.width = '32px';
-                el.style.height = '32px';
-                el.style.borderRadius = '50%';
-                el.style.backgroundColor = '#22c55e';
-                el.style.border = '4px solid white';
-                el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
-                el.style.cursor = 'pointer';
-                
-                const popup = new mapboxgl.Popup({{ anchor: 'bottom' }})
-                    .setHTML(`
-                        <div style="padding: 8px; min-width: 200px;">
-                            <h3 style="font-weight: 500; margin-bottom: 4px;">${{facility.name}}</h3>
-                            <p style="font-size: 12px; color: #666; margin-bottom: 8px;">${{facility.address}}</p>
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <span style="padding: 2px 8px; background: #dcfce7; color: #15803d; border-radius: 9999px; font-size: 11px;">
-                                    ${{facility.type}}
-                                </span>
-                                ${{facility.url && facility.url !== '#' ? `<a href="${{facility.url}}" target="_blank" style="color: #22c55e; font-size: 11px;">Directions</a>` : ''}}
-                            </div>
-                        </div>
-                    `);
-                
-                new mapboxgl.Marker(el)
-                    .setLngLat([facility.lng, facility.lat])
-                    .setPopup(popup)
-                    .addTo(map);
-            }});
-        }}
+        facilities = result.get("facilities", [])
+        if not facilities:
+            return None
         
-        map.on('load', geocodeAndAddMarkers);
-    </script>
-    '''
+        # Return the section with heading and cards, wrapped with additional spacing
+        return ui.div(
+            facility_map_section(),
+            class_="mt-8"
+        )
 
 
 app = App(app_ui, server)

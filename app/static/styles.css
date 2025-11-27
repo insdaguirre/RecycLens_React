@@ -20,6 +20,7 @@ body {
 .mb-6 { margin-bottom: 1.5rem; }
 .mb-8 { margin-bottom: 2rem; }
 .mb-12 { margin-bottom: 3rem; }
+.mt-16 { margin-top: 4rem; }
 .mt-20 { margin-top: 5rem; }
 .mt-32 { margin-top: 8rem; }
 .mt-4 { margin-top: 1rem; }
@@ -51,13 +52,61 @@ body {
     color: #111827 !important; /* Dark gray instead of blue */
     font-weight: 300 !important;
     cursor: pointer;
+    border: none !important;
+    background: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
 }
 
 .nav-logo-link a:hover,
-.nav-logo-link button:hover {
+.nav-logo-link a:visited,
+.nav-logo-link a:active,
+.nav-logo-link a:focus,
+.nav-logo-link button:hover,
+.nav-logo-link button:visited,
+.nav-logo-link button:active,
+.nav-logo-link button:focus {
     text-decoration: none !important;
     color: #111827 !important; /* Keep same color on hover */
+    border: none !important;
+    background: none !important;
+    outline: none !important;
 }
+
+/* Logo emoji styling */
+.nav-logo-link > div > span:first-child {
+    display: inline-block;
+    margin-right: 0.5rem;
+}
+
+/* Navbar links styling - make them look like plain text */
+.navbar-container a,
+.navbar-container button {
+    text-decoration: none !important;
+    color: #4b5563 !important; /* Gray-600 */
+    font-size: 1.125rem !important; /* text-lg - bigger than default */
+    font-weight: 300 !important;
+    border: none !important;
+    background: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.navbar-container a:hover,
+.navbar-container a:visited,
+.navbar-container a:active,
+.navbar-container a:focus,
+.navbar-container button:hover,
+.navbar-container button:visited,
+.navbar-container button:active,
+.navbar-container button:focus {
+    text-decoration: none !important;
+    color: #4b5563 !important; /* Keep gray on hover */
+    border: none !important;
+    background: none !important;
+    outline: none !important;
+}
+
 .text-6xl { font-size: 3.75rem; line-height: 1; }
 .text-4xl { font-size: 2.25rem; line-height: 2.5rem; }
 .text-3xl { font-size: 1.875rem; line-height: 2.25rem; }
