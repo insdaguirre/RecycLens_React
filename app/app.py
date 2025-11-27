@@ -4,6 +4,7 @@ import os
 from io import BytesIO
 from typing import Optional, Dict, Any
 from pathlib import Path
+from urllib.parse import quote_plus
 
 from shiny import App, ui, reactive, render
 from shiny.types import FileInfo
@@ -227,7 +228,7 @@ def how_it_works_page():
         {
             "icon": "🗺️",
             "title": "Find Nearby Facilities",
-            "description": "View recycling centers and disposal facilities on an interactive map with directions."
+            "description": "View recycling centers and disposal facilities with links to get directions."
         }
     ]
     
@@ -324,7 +325,7 @@ def how_it_works_page():
                 ui.input_action_link(
                     "nav_to_home",
                     "Try RecycLens Now",
-                    class_="bg-gradient-to-r from-green-500 to-green-600 text-white px-8 py-4 rounded-2xl text-lg font-medium hover:from-green-600 hover:to-green-700 transition-all shadow-lg hover:shadow-xl"
+                    class_="bg-gradient-to-r from-green-500 to-green-600 text-white px-8 py-4 rounded-2xl text-lg font-medium hover:from-green-600 hover:to-green-700 transition-all shadow-lg hover:shadow-xl no-underline"
                 ),
                 class_="text-center"
             ),
@@ -374,30 +375,40 @@ app_ui = ui.page_fluid(
             document.addEventListener('shiny:value', setupFileUpload);
         }
         
-        // Show progress indicator immediately on button click
+        // Show progress indicator immediately on button click (only if inputs are valid)
         function setupProgressIndicator() {
             // Use event delegation to handle dynamically created buttons
             document.addEventListener('click', function(e) {
                 const button = e.target.closest('[id*="check_button"]');
                 if (button) {
-                    // Find the progress indicator output container
-                    setTimeout(function() {
-                        const progressOutput = document.querySelector('[id*="progress_indicator"]');
-                        if (progressOutput) {
-                            // Check if it's already showing (to avoid duplicate)
-                            if (!progressOutput.querySelector('.analyzing-indicator')) {
-                                progressOutput.innerHTML = `
-                                    <div class="mb-6 analyzing-indicator">
-                                        <div class="flex items-center text-green-600">
-                                            <span class="animate-spin">⏳</span>
-                                            <span class="ml-2">Analyzing...</span>
+                    // Validate inputs before showing indicator
+                    const fileInput = document.querySelector('[id*="image"]');
+                    const locationInput = document.querySelector('[id*="location"]');
+                    
+                    const hasImage = fileInput && fileInput.files && fileInput.files.length > 0;
+                    const hasLocation = locationInput && locationInput.value && locationInput.value.trim().length > 0;
+                    
+                    // Only show indicator if both are valid
+                    if (hasImage && hasLocation) {
+                        // Find the progress indicator output container
+                        setTimeout(function() {
+                            const progressOutput = document.querySelector('[id*="progress_indicator"]');
+                            if (progressOutput) {
+                                // Check if it's already showing (to avoid duplicate)
+                                if (!progressOutput.querySelector('.analyzing-indicator')) {
+                                    progressOutput.innerHTML = `
+                                        <div class="mb-6 analyzing-indicator">
+                                            <div class="flex items-center text-green-600">
+                                                <span class="animate-spin">⏳</span>
+                                                <span class="ml-2">Analyzing...</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                `;
-                                progressOutput.style.display = 'block';
+                                    `;
+                                    progressOutput.style.display = 'block';
+                                }
                             }
-                        }
-                    }, 10);
+                        }, 10);
+                    }
                 }
             });
         }
@@ -559,23 +570,22 @@ def server(input, output, session):
         show_results.set(False)
         analysis_result.set(None)
         vision_result.set(None)
+        analysis_stage.set(STAGE_IDLE)
         
-        # Set stage immediately (JavaScript will show it, but this ensures server state is correct)
-        analysis_stage.set(STAGE_ANALYZING_IMAGE)
-        
-        # Validation
+        # Validation FIRST - don't set analyzing stage until validation passes
         file_info = input.image()
         location = input.location()
         
         if file_info is None or len(file_info) == 0:
             error_message.set("Please upload an image")
-            analysis_stage.set(STAGE_IDLE)
             return
         
         if not location or not location.strip():
             error_message.set("Please enter your location")
-            analysis_stage.set(STAGE_IDLE)
             return
+        
+        # Only set analyzing stage AFTER validation passes
+        analysis_stage.set(STAGE_ANALYZING_IMAGE)
         
         try:
             # Stage 1: Analyze image
@@ -684,6 +694,13 @@ def server(input, output, session):
             class_="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 transition-all duration-700 ease-in-out w-[40%]"
         )
     
+    def generate_google_maps_url(name, address=None):
+        """Generate Google Maps search URL for a facility."""
+        query = name
+        if address:
+            query = f"{name} {address}"
+        return f"https://www.google.com/maps/search/?api=1&query={quote_plus(query)}"
+    
     @output
     @render.ui
     def facility_cards():
@@ -716,10 +733,13 @@ def server(input, output, session):
                     ),
                     ui.a(
                         "🔗",
-                        href=facility.get("url", "#"),
+                        href=generate_google_maps_url(
+                            facility.get("name", ""),
+                            facility.get("address")
+                        ),
                         target="_blank",
                         class_="text-green-600 hover:text-green-700 transition-colors"
-                    ) if facility.get("url") and facility.get("url") != "#" else None,
+                    ),
                     class_="flex items-start justify-between mb-3"
                 ),
                 ui.div(

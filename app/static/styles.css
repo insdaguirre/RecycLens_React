@@ -231,6 +231,11 @@ body {
 .leading-relaxed { line-height: 1.625; }
 .list-decimal { list-style-type: decimal; }
 .list-inside { list-style-position: inside; }
+.no-underline { text-decoration: none !important; }
+.no-underline:hover,
+.no-underline:visited,
+.no-underline:active,
+.no-underline:focus { text-decoration: none !important; }
 .overflow-hidden { overflow: hidden; }
 .relative { position: relative; }
 .absolute { position: absolute; }
