@@ -1,5 +1,28 @@
-import { useEffect, useRef, useId } from 'react';
+import React, { useEffect, useRef, useId } from 'react';
 import './GlassSurface.css';
+
+interface GlassSurfaceProps {
+  children?: React.ReactNode;
+  width?: number | string;
+  height?: number | string;
+  borderRadius?: number;
+  borderWidth?: number;
+  brightness?: number;
+  opacity?: number;
+  blur?: number;
+  displace?: number;
+  backgroundOpacity?: number;
+  saturation?: number;
+  distortionScale?: number;
+  redOffset?: number;
+  greenOffset?: number;
+  blueOffset?: number;
+  xChannel?: string;
+  yChannel?: string;
+  mixBlendMode?: string;
+  className?: string;
+  style?: React.CSSProperties;
+}
 
 const GlassSurface = ({
   children,
@@ -22,17 +45,17 @@ const GlassSurface = ({
   mixBlendMode = 'difference',
   className = '',
   style = {}
-}) => {
+}: GlassSurfaceProps) => {
   const uniqueId = useId().replace(/:/g, '-');
   const filterId = `glass-filter-${uniqueId}`;
   const redGradId = `red-grad-${uniqueId}`;
   const blueGradId = `blue-grad-${uniqueId}`;
-  const containerRef = useRef(null);
-  const feImageRef = useRef(null);
-  const redChannelRef = useRef(null);
-  const greenChannelRef = useRef(null);
-  const blueChannelRef = useRef(null);
-  const gaussianBlurRef = useRef(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const feImageRef = useRef<SVGFEImageElement | null>(null);
+  const redChannelRef = useRef<SVGFEDisplacementMapElement | null>(null);
+  const greenChannelRef = useRef<SVGFEDisplacementMapElement | null>(null);
+  const blueChannelRef = useRef<SVGFEDisplacementMapElement | null>(null);
+  const gaussianBlurRef = useRef<SVGFEGaussianBlurElement | null>(null);
 
   const generateDisplacementMap = () => {
     const rect = containerRef.current?.getBoundingClientRect();
