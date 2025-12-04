@@ -15,7 +15,7 @@ const RecycLens = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [showResult, setShowResult] = useState(false);
   
-  const { analyze, loading, error, data, stage, setStage, complete } = useAnalyzeItem();
+  const { analyze, loading, error, data, stage, complete } = useAnalyzeItem();
 
   // Map stages to user-friendly messages
   const stageMessages: Record<string, string> = {

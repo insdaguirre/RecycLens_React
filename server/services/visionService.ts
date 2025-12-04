@@ -104,7 +104,7 @@ Now analyze this image and return the material analysis as JSON:`;
 
     // Use Chat Completions API with vision support (matching OpenAI's official format)
     const response = await openai.chat.completions.create({
-      model: 'gpt-5',
+      model: 'gpt-4.1-mini',
       messages: [
         {
           role: 'system',
