@@ -12,10 +12,13 @@ export default function ImageUpload({ onImageSelect, imagePreview, onRemove }: I
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
+  // Allowed image formats
+  const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+
   const validateFile = (file: File): boolean => {
-    // Check file type
-    if (!file.type.startsWith('image/')) {
-      setError('Please select an image file');
+    // Check file type - only allow specific formats
+    if (!allowedTypes.includes(file.type)) {
+      setError('Only PNG, JPEG, GIF, and WebP formats are allowed');
       return false;
     }
 
@@ -83,7 +86,7 @@ export default function ImageUpload({ onImageSelect, imagePreview, onRemove }: I
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
         onChange={handleInputChange}
         className="hidden"
       />
@@ -125,7 +128,7 @@ export default function ImageUpload({ onImageSelect, imagePreview, onRemove }: I
             </div>
           </div>
           <p className="text-gray-600 mb-2">Drop an image here or click to browse</p>
-          <p className="text-sm text-gray-400">Upload or Take a Photo</p>
+          <p className="text-sm text-gray-400">PNG, JPEG, GIF, or WebP only</p>
         </div>
       )}
 
