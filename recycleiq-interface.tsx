@@ -147,13 +147,13 @@ const RecycLens = () => {
         {/* Container that transitions from centered to side-by-side */}
         <div className={`transition-all duration-700 ease-in-out ${
           showResult 
-            ? 'flex items-start justify-center gap-8' // Side-by-side with gap
+            ? 'flex flex-col md:flex-row items-start justify-center gap-8' // Stack on mobile, side-by-side on desktop
             : ''  // No flex when centered - let children center themselves
         }`}>
           {/* Entry Box - transitions from centered to left (40%) */}
           <div className={`bg-white rounded-3xl shadow-sm border border-gray-100 p-8 transition-all duration-700 ease-in-out ${
             showResult 
-              ? 'w-[40%]' // 40% width when results show
+              ? 'w-full md:w-[40%]' // Full width on mobile, 40% on desktop when results show
               : 'max-w-2xl mx-auto' // Centered with same max-width as subtitle
           }`}>
             {/* Location Input */}
@@ -231,10 +231,10 @@ const RecycLens = () => {
             </button>
           </div>
 
-          {/* Results Panel - appears on right (40%) */}
+          {/* Results Panel - appears on right (40%) or below on mobile */}
           <div className={`transition-all duration-700 ease-in-out ${
             showResult && data
-              ? 'w-[40%] opacity-100 translate-x-0' 
+              ? 'w-full md:w-[40%] opacity-100 translate-x-0' 
               : 'w-0 opacity-0 translate-x-8 overflow-hidden'
           }`}>
             {data && <ResultsPanel data={data} isVisible={showResult} />}
