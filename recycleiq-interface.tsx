@@ -155,19 +155,19 @@ const RecycLens = () => {
           </p>
         </div>
 
-        {/* Main content container - flex column when results show */}
-        <div className={showResult ? 'flex flex-col' : ''}>
-          {/* Container that transitions from centered to side-by-side */}
-          <div className={`transition-all duration-700 ease-in-out ${
+        {/* Main content container */}
+        <div className={showResult ? 'flex flex-col md:flex-row items-stretch justify-center gap-8' : ''}>
+          {/* Left Column: Upload + Chat Card */}
+          <div className={`transition-all duration-700 ease-in-out flex flex-col gap-8 ${
             showResult 
-              ? 'flex flex-col md:flex-row items-start justify-center gap-8 flex-shrink-0' // Stack on mobile, side-by-side on desktop
-              : ''  // No flex when centered - let children center themselves
+              ? 'w-full md:w-[40%]' // Full width on mobile, 40% on desktop when results show
+              : 'max-w-2xl mx-auto' // Centered with same max-width as subtitle
           }`}>
             {/* Entry Box - transitions from centered to left (40%) */}
             <div className={`bg-white rounded-3xl shadow-sm border border-gray-100 p-8 transition-all duration-700 ease-in-out ${
               showResult 
-                ? 'w-full md:w-[40%]' // Full width on mobile, 40% on desktop when results show
-                : 'max-w-2xl mx-auto' // Centered with same max-width as subtitle
+                ? 'w-full' // Full width of left column
+                : 'w-full' // Full width when centered
             }`}>
             {/* Location Input */}
             <div className="mb-6">
@@ -242,59 +242,61 @@ const RecycLens = () => {
                 'Check if it\'s Recyclable'
               )}
             </button>
+            </div>
+
+            {/* Chat Card - directly underneath upload card, dynamically fills space */}
+            {showResult && data && (
+              <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 flex-1 flex items-center justify-center min-h-[200px] transition-all duration-700 ease-in-out">
+                <div className="w-full h-full flex items-center justify-center">
+                  <ChatCard
+                    onClick={() => {
+                      setChatContext({
+                        analysisData: data,
+                        location: location.trim(),
+                        material: data.materialDescription,
+                        visionData: visionData || undefined,
+                      });
+                      setCurrentPage('chat');
+                    }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
-            {/* Results Panel - appears on right (40%) or below on mobile */}
-            <div className={`transition-all duration-700 ease-in-out ${
-              showResult && data
-                ? 'w-full md:w-[40%] opacity-100 translate-x-0' 
-                : 'w-0 opacity-0 translate-x-8 overflow-hidden'
-            }`}>
-              {data && (
-                <ResultsPanel
-                  data={data}
-                  isVisible={showResult}
-                />
-              )}
-            </div>
+          {/* Right Column: Results Panel */}
+          <div className={`transition-all duration-700 ease-in-out ${
+            showResult && data
+              ? 'w-full md:w-[40%] opacity-100 translate-x-0' 
+              : 'w-0 opacity-0 translate-x-8 overflow-hidden'
+          }`}>
+            {data && (
+              <ResultsPanel
+                data={data}
+                isVisible={showResult}
+              />
+            )}
           </div>
-
-          {/* Chat Card - appears between upload/results and sources, dynamically fills space */}
-          {showResult && data && (
-            <div className="mt-8 transition-all duration-700 ease-in-out w-full md:w-[calc(80%+2rem)] mx-auto flex-1 flex flex-col min-h-[300px]">
-              <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 h-full flex items-center justify-center">
-                <ChatCard
-                  onClick={() => {
-                    setChatContext({
-                      analysisData: data,
-                      location: location.trim(),
-                      material: data.materialDescription,
-                      visionData: visionData || undefined,
-                    });
-                    setCurrentPage('chat');
-                  }}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Sources Panel - appears below both cards, matches width of two cards */}
-          {showResult && data && (
-            <div className={`mt-8 transition-all duration-700 ease-in-out flex-shrink-0 ${
-              showResult 
-                ? 'flex flex-col md:flex-row items-start justify-center gap-8' 
-                : ''
-            }`}>
-              <div className="w-full md:w-[calc(80%+2rem)]">
-                <SourcesPanel
-                  ragSources={data.ragSources}
-                  webSearchSources={data.webSearchSources}
-                  ragQueried={data.ragQueried}
-                />
-              </div>
-            </div>
-          )}
         </div>
+
+        {/* Sources Panel - appears below both columns */}
+
+        {/* Sources Panel - appears below both columns */}
+        {showResult && data && (
+          <div className={`mt-8 transition-all duration-700 ease-in-out ${
+            showResult 
+              ? 'flex flex-col md:flex-row items-start justify-center gap-8' 
+              : ''
+          }`}>
+            <div className="w-full md:w-[calc(80%+2rem)]">
+              <SourcesPanel
+                ragSources={data.ragSources}
+                webSearchSources={data.webSearchSources}
+                ragQueried={data.ragQueried}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Map Section */}
         <div className="mt-20">
