@@ -9,6 +9,7 @@ export function useAnalyzeItem() {
     data: null,
     stage: 'idle',
   });
+  const [visionData, setVisionData] = useState<VisionResponse | null>(null);
 
   const analyze = async (request: AnalyzeRequest) => {
     setState({
@@ -81,6 +82,7 @@ export function useAnalyzeItem() {
       data: null,
       stage: 'idle',
     });
+    setVisionData(null);
   };
 
   return {

@@ -9,7 +9,7 @@ import FacilityCard from './src/components/FacilityCard';
 import FacilityMap from './src/components/FacilityMap';
 import HowItWorks from './src/components/HowItWorks';
 import GlassSurface from './src/components/GlassSurface';
-import type { ChatContext, VisionResponse } from './src/types/recycleiq';
+import type { ChatContext } from './src/types/recycleiq';
 
 const RecycLens = () => {
   const [currentPage, setCurrentPage] = useState<'home' | 'how-it-works' | 'chat'>('home');
