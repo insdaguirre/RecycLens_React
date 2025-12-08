@@ -4,20 +4,23 @@ import { useAnalyzeItem } from './src/hooks/useAnalyzeItem';
 import ImageUpload from './src/components/ImageUpload';
 import ResultsPanel from './src/components/ResultsPanel';
 import SourcesPanel from './src/components/SourcesPanel';
+import ChatPage from './src/components/ChatPage';
 import FacilityCard from './src/components/FacilityCard';
 import FacilityMap from './src/components/FacilityMap';
 import HowItWorks from './src/components/HowItWorks';
 import GlassSurface from './src/components/GlassSurface';
+import type { ChatContext, VisionResponse } from './src/types/recycleiq';
 
 const RecycLens = () => {
-  const [currentPage, setCurrentPage] = useState<'home' | 'how-it-works'>('home');
+  const [currentPage, setCurrentPage] = useState<'home' | 'how-it-works' | 'chat'>('home');
   const [location, setLocation] = useState('');
   const [context, setContext] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [showResult, setShowResult] = useState(false);
+  const [chatContext, setChatContext] = useState<ChatContext | undefined>(undefined);
   
-  const { analyze, loading, error, data, stage, complete } = useAnalyzeItem();
+  const { analyze, loading, error, data, stage, complete, visionData } = useAnalyzeItem();
 
   // Map stages to user-friendly messages
   const stageMessages: Record<string, string> = {
@@ -121,6 +124,12 @@ const RecycLens = () => {
               <span className="text-xl font-light tracking-tight">RecycLens</span>
             </button>
             <div className="flex items-center space-x-8">
+              <button
+                onClick={() => setCurrentPage('chat')}
+                className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                Chat
+              </button>
               <button
                 onClick={() => setCurrentPage(currentPage === 'home' ? 'how-it-works' : 'home')}
                 className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
@@ -238,7 +247,21 @@ const RecycLens = () => {
               ? 'w-full md:w-[40%] opacity-100 translate-x-0' 
               : 'w-0 opacity-0 translate-x-8 overflow-hidden'
           }`}>
-            {data && <ResultsPanel data={data} isVisible={showResult} />}
+            {data && (
+              <ResultsPanel
+                data={data}
+                isVisible={showResult}
+                onChatClick={() => {
+                  setChatContext({
+                    analysisData: data,
+                    location: location.trim(),
+                    material: data.materialDescription,
+                    visionData: visionData || undefined,
+                  });
+                  setCurrentPage('chat');
+                }}
+              />
+            )}
           </div>
         </div>
 
@@ -371,6 +394,11 @@ const RecycLens = () => {
             </div>
           </footer>
         </>
+      ) : currentPage === 'chat' ? (
+        <ChatPage
+          initialContext={chatContext}
+          onBack={() => setCurrentPage('home')}
+        />
       ) : (
         <HowItWorks onBackToHome={() => setCurrentPage('home')} />
       )}

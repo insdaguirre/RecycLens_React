@@ -1,4 +1,4 @@
-import type { AnalyzeRequest, AnalyzeResponse, VisionResponse } from '../types/recycleiq';
+import type { AnalyzeRequest, AnalyzeResponse, VisionResponse, ChatMessage, ChatContext } from '../types/recycleiq';
 
 export async function analyzeItem(request: AnalyzeRequest): Promise<AnalyzeResponse> {
   const response = await fetch('/api/analyze', {
@@ -49,5 +49,32 @@ export async function analyzeRecyclability(
 
   const data = await response.json();
   return data.result;
+}
+
+export interface ChatApiResponse {
+  response: string;
+  sources?: {
+    rag?: string[];
+    web?: string[];
+  };
+}
+
+export async function sendChatMessage(
+  message: string,
+  conversationHistory?: ChatMessage[],
+  context?: ChatContext
+): Promise<ChatApiResponse> {
+  const response = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message, conversationHistory, context }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: response.statusText }));
+    throw new Error(errorData.message || `API error: ${response.statusText}`);
+  }
+
+  return response.json();
 }
 

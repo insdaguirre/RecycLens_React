@@ -24,6 +24,9 @@ export function useAnalyzeItem() {
       // Stage 1: Vision Analysis (only if image is provided)
       if (request.image) {
         visionResult = await analyzeVision(request.image);
+        setVisionData(visionResult);
+      } else {
+        setVisionData(null);
       }
       
       // Stage 2: Query RAG (simulated, like Shiny)
@@ -89,6 +92,7 @@ export function useAnalyzeItem() {
     error: state.error,
     data: state.data,
     stage: state.stage,
+    visionData,
   };
 }
 

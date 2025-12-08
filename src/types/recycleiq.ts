@@ -56,3 +56,24 @@ export interface AnalyzeState {
   stage: AnalysisStage;
 }
 
+// Chat types
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp?: Date;
+}
+
+export interface ChatContext {
+  analysisData?: AnalyzeResponse;
+  location?: string;
+  material?: string;
+  visionData?: VisionResponse;
+}
+
+export interface ChatState {
+  messages: ChatMessage[];
+  loading: boolean;
+  error: string | null;
+  context: ChatContext | null;
+}
+

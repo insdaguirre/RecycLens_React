@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { existsSync } from 'fs';
 import analyzeRouter from './routes/analyze.js';
+import chatRouter from './routes/chat.js';
 
 // Load environment variables
 dotenv.config();
@@ -29,6 +30,7 @@ if (!process.env.OPENAI_API_KEY) {
 
 // API Routes (must come before static file serving)
 app.use('/api/analyze', analyzeRouter);
+app.use('/api/chat', chatRouter);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

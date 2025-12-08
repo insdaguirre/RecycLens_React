@@ -41,3 +41,17 @@ export interface AnalyzeResponse {
   webSearchSources?: string[];
 }
 
+// Chat types
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp?: Date;
+}
+
+export interface ChatContext {
+  analysisData?: AnalyzeResponse;
+  location?: string;
+  material?: string;
+  visionData?: VisionResponse;
+}
+

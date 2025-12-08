@@ -1,7 +1,11 @@
-change models to be smaller 
-specify allowed file types
-add async progress indicators 
+change models to be smaller (done -> 4.1 mini)
+specify allowed file types (done -> UI states)
+add async progress indicators (done -> in green button)
 add sources menu 
-change required fields 
+change required fields (done -> only context or image required now )
 chat box integration 
 auto location feature 
+navbar redo (done -> liquid glass + recycle icon)
+structured data for facility hours 
+facilities linked (done -> clicking takes to their website )
+facilities in map (done -> map shows facilities )
