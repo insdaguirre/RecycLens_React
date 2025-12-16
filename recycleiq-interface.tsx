@@ -10,10 +10,11 @@ import FacilityCard from './src/components/FacilityCard';
 import FacilityMap from './src/components/FacilityMap';
 import HowItWorks from './src/components/HowItWorks';
 import GlassSurface from './src/components/GlassSurface';
+import FAQ from './src/components/FAQ';
 import type { ChatContext } from './src/types/recycleiq';
 
 const RecycLens = () => {
-  const [currentPage, setCurrentPage] = useState<'home' | 'how-it-works' | 'chat'>('home');
+  const [currentPage, setCurrentPage] = useState<'home' | 'how-it-works' | 'chat' | 'faq'>('home');
   const [location, setLocation] = useState('');
   const [context, setContext] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -132,10 +133,16 @@ const RecycLens = () => {
                 Chat
               </button>
               <button
-                onClick={() => setCurrentPage(currentPage === 'home' ? 'how-it-works' : 'home')}
+                onClick={() => setCurrentPage('how-it-works')}
                 className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
               >
-                {currentPage === 'home' ? 'How it Works' : 'Home'}
+                How it Works
+              </button>
+              <button
+                onClick={() => setCurrentPage('faq')}
+                className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                Common Questions
               </button>
             </div>
           </div>
@@ -415,8 +422,10 @@ const RecycLens = () => {
           initialContext={chatContext}
           onBack={() => setCurrentPage('home')}
         />
-      ) : (
+      ) : currentPage === 'how-it-works' ? (
         <HowItWorks onBackToHome={() => setCurrentPage('home')} />
+      ) : (
+        <FAQ onBackToHome={() => setCurrentPage('home')} />
       )}
     </div>
   );
