@@ -2,7 +2,7 @@
 county: tompkins
 state: NY
 content_type: pdf
-source_file: C:\Users\nidhi\Documents\Personal_Projects\RecycLens\rag_pdf_data\tompkins\cesqg-application-and-inventory-2025.pdf
+source_file: \tompkins\cesqg-application-and-inventory-2025.pdf
 ---
 
             Updated September 2025 

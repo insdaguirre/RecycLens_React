@@ -30,7 +30,7 @@ for d in docs:
 
 nodes = splitter.get_nodes_from_documents(docs)
 index = VectorStoreIndex(nodes)
-index.storage_context.persist("./rag/rag_index_morechunked")
+index.storage_context.persist("./rag_service/rag_index_morechunked")
 
 # Less chunked code
 #docs = SimpleDirectoryReader("./rag/rag_docs").load_data()

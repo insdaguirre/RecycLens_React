@@ -2,7 +2,7 @@
 county: tompkins
 state: NY
 content_type: pdf
-source_file: C:\Users\nidhi\Documents\Personal_Projects\RecycLens\rag_pdf_data\tompkins\2025curbsiderecyclingguidelines-final-onlineviewing.pdf
+source_file: \tompkins\2025curbsiderecyclingguidelines-final-onlineviewing.pdf
 ---
 
             JULY 2025-JUNE 2026

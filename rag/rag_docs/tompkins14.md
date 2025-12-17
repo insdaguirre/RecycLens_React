@@ -197,9 +197,9 @@ Employment OpportunitiesCivil ServiceBenefitsEmployee LeavesContracts/Salary Sca
 
 What is Unlawful Discrimination?Fair HousingEqual Employment OpportunityHuman Rights K-12 Arts GalleryVolunteers and InternsNYS Division of Human Rights BrochuresWorkplace ResourcesCommunity ReferralsLEP/LAPHuman Rights Commission Advisory BoardEmail Tompkins County Office of Human RightsInformation Technology ServicesIthaca-Tompkins County Transportation CouncilSub-menu
 
-About ITCTCMeeting ScheduleCivil RightsPublic ParticipationUnified Planning Work Program (Simplified Statement of Work)Transportation Improvement Program (TIP)2045 Long Range Transportation PlanAnnual Listing of Federal Aid Project ObligationCompleted Projects, Studies and MapsStatisticsMunicipal Transportation SnapshotsTransportation LinksEmail ITCTCPlanning and SustainabilitySub-menu
+About ITCTCMeeting ScheduleCivil RightsPublic ParticipationUnified Planning Work Program (Simplified Statement of Work)Transportation Improvement Program (TIP)2045 Long Range Transportation PlanAnnual Listing of Federal Aid Project ObligationCompleted Projects, Studies and MapsStatisticsMunicipal Transportation SnapshotsTransportation LinksEmail ITCTCMotor VehiclesPlanning and SustainabilitySub-menu
 
-Advisory BoardsBusiness Energy AdvisorsClimate Adaptation and ResiliencyCommunity PlanningComprehensive PlanThe EconomyEnergy and Greenhouse Gas EmissionsHousingMaps and DataNatural Resources and AgricultureCounty OperationsPlanning Department StaffSustainabilityTourismTransportationWater ResourcesEmail Planning and Sustainability DepartmentMotor VehiclesProbation and Community JusticeSub-menu
+Advisory BoardsBusiness Energy AdvisorsClimate Adaptation and ResiliencyCommunity PlanningComprehensive PlanThe EconomyEnergy and Greenhouse Gas EmissionsHousingMaps and DataNatural Resources and AgricultureCounty OperationsPlanning Department StaffSustainabilityTourismTransportationWater ResourcesEmail Planning and Sustainability DepartmentProbation and Community JusticeSub-menu
 
 Annual ReportsMandated ServicesCriminal Adult ServicesJuvenile ServicesGraduated ResponsesESSOSpecialized ProgramsVictim ServicesResourcesCareer OpportunitiesEmail Probation and Community Justice DepartmentTransparency HubRecycling & Materials ManagementSub-menu
 
@@ -381,14 +381,27 @@ Made with a minimum of 75% post-consumer recycled content, the bags are washable
 
 
 
+
+
+
+
+
+
 “Since the plastic bag ban, there has been a reduction in litter. The reusable bags will help make practicing sustainability easier for all Tompkins County residents,” said Leo Riley, TCRMM Director.
-TCRMM is prioritizing agencies and organizations that did not previously receive bags this year in order to maximize equitable distribution.
+TCRMM is prioritizing agencies and organizations that did not previously receive bags this year in order to maximize equitable distribution. 
+
+
+“Since the plastic bag ban, there has been a reduction in litter. The reusable bags will help make practicing sustainability easier for all Tompkins County residents,” said Leo Riley, TCRMM Director.
+TCRMM promotes waste reduction by encouraging residents to skip the fee and bring a bag. Need some tips to help build the habit?
+
+Store your bags by the door
+Keep your bags in the car
+And bring extra bags in your backpack 
 
 
 
-To support reuse of these bags, TCRMM is providing downloadable messaging assets, including client-facing signs and social media assets. Click here to view and download the assets.
-Since 2020, TCRMM has distributed over 19,000 reusable bags through a network of over 30 local agencies and organizations, including Loaves & Fishes, Enfield Food Pantry, REACH Medical, the YMCA of Ithaca and Tompkins County, and Southside Community Center.
-For more information on how to request reusable bags for your agency, please contact us.
+Since 2020, TCRMM has distributed over 19,000 reusable bags through a network of over 30 local agencies and organizations.
+For more information on how to request reusable bags to distribute your agency, please contact us.
 
 
 
