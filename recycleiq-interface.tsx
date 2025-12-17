@@ -12,6 +12,7 @@ import HowItWorks from './src/components/HowItWorks';
 import GlassSurface from './src/components/GlassSurface';
 import FAQ from './src/components/FAQ';
 import type { ChatContext } from './src/types/recycleiq';
+import LocationAutocomplete from './src/components/LocationAutocomplete';
 
 const RecycLens = () => {
   const [currentPage, setCurrentPage] = useState<'home' | 'how-it-works' | 'chat' | 'faq'>('home');
@@ -176,22 +177,13 @@ const RecycLens = () => {
                 ? 'w-full' // Full width of left column
                 : 'w-full' // Full width when centered
             }`}>
-            {/* Location Input */}
-            <div className="mb-6">
-              <label className="text-sm font-medium text-gray-700 mb-2 block">
-                Location <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Enter your city or ZIP code"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all text-gray-900"
-                />
-              </div>
-            </div>
+            {/* Location Input with Autocomplete */}
+            <LocationAutocomplete
+              value={location}
+              onChange={setLocation}
+              placeholder="Enter your city or ZIP code"
+              required={true}
+            />
 
             {/* Context Input */}
             <div className="mb-6">
