@@ -20,6 +20,9 @@ export interface Facility {
   address: string;
   url: string;
   notes: string;
+  email:string;
+  phone:string;
+  hours:string;
   coordinates?: [number, number]; // [longitude, latitude] - optional for MVP
 }
 

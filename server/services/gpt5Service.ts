@@ -97,7 +97,18 @@ function extractJSONFromResponse(content: string): any {
   try {
     return JSON.parse(content);
   } catch (e) {
+    console.error(e);
     throw new Error('Failed to parse JSON from assistant response');
+  }
+}
+
+function normalizeFacilityUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return parsed.href;
+  } catch {
+    console.error('Problem with URL.');
+    return '#';
   }
 }
 
@@ -222,7 +233,7 @@ Please:
 2. Identify the category it belongs to
 3. Determine which bin it should go in (recycling, landfill, compost, hazardous, or unknown)
 4. Provide clear, step-by-step instructions for proper disposal
-5. Use web search to find 3-5 nearby recycling and disposal facilities in ${location}
+5. Use web search to find 3-5 nearby recycling and disposal facilities in ${location}.
 6. Return your complete analysis as a JSON object matching this exact structure:
 {
   "isRecyclable": boolean,
@@ -238,14 +249,19 @@ Please:
     "type": string,
     "address": string,
     "url": string,
-    "notes": string
+    "notes": string,
+    "email": string,
+    "phone": string,
+    "hours": string
   }],
   "webSearchSources": string[]
 }
 
 IMPORTANT: Include a "webSearchSources" array with URLs of web pages you consulted for recycling information (not just facilities). This should include any websites you used to determine recyclability, disposal methods, or general recycling guidelines. Include the full URLs of the sources you used.
 
-Search for queries like "recycling facilities ${location}" or "${visionResult.primaryMaterial} disposal ${location}" to find local facilities.`;
+Search for queries like "recycling facilities ${location}" or "${visionResult.primaryMaterial} disposal ${location}" to find local facilities. For each facility in "facilities", the "url" field must be the canonical homepage URL exactly as shown in the browser address bar of the facility’s official website. Do NOT guess URLs. Do NOT modify protocol (http/https) or add/remove "www". If the exact official website URL cannot be confidently verified, return a string "#". 
+
+For the last three fields in "facilities", try to find each facility's contact information like email address, phone number, and hours of operation. Every facility object must include all fields listed above. If email, phone, or hours are unavailable, return them as empty strings (""). Do NOT omit fields. Do NOT use null.`;
     } else {
       // Case 2: No image, use context to determine identity
       input = `You are a recycling and disposal assistant. Analyze this item for recyclability based on the user's description.
@@ -283,14 +299,19 @@ Then:
     "type": string,
     "address": string,
     "url": string,
-    "notes": string
+    "notes": string,
+    "email": string,
+    "phone": string,
+    "hours": string
   }],
   "webSearchSources": string[]
 }
 
 IMPORTANT: Include a "webSearchSources" array with URLs of web pages you consulted for recycling information (not just facilities). This should include any websites you used to determine recyclability, disposal methods, or general recycling guidelines. Include the full URLs of the sources you used.
 
-Search for queries like "recycling facilities ${location}" or "[material] disposal ${location}" to find local facilities.`;
+Search for queries like "recycling facilities ${location}" or "[material] disposal ${location}" to find local facilities. For each facility in "facilities", the "url" field must be the canonical homepage URL exactly as shown in the browser address bar of the facility’s official website. Do NOT guess URLs. Do NOT modify protocol (http/https) or add/remove "www". If the exact official website URL cannot be confidently verified, return a string "#". 
+
+For the last three fields in "facilities", try to find each facility's contact information like email address, phone number, and hours of operation. Every facility object must include all fields listed above. If email, phone, or hours are unavailable, return them as empty strings (""). Do NOT omit fields. Do NOT use null.`;
     }
 
     // Build tools array with web_search
@@ -323,10 +344,13 @@ Search for queries like "recycling facilities ${location}" or "[material] dispos
     // Parse JSON from response
     const parsed = extractJSONFromResponse(outputText);
 
+
     // Extract web search sources
     const webSearchSources: string[] = Array.isArray(parsed.webSearchSources)
       ? parsed.webSearchSources.filter((url: any) => typeof url === 'string' && url.trim().length > 0)
       : [];
+
+
 
     // Validate and structure the response
     const facilities: Facility[] = Array.isArray(parsed.facilities)
@@ -334,8 +358,11 @@ Search for queries like "recycling facilities ${location}" or "[material] dispos
           name: f.name || 'Unknown Facility',
           type: f.type || 'Recycling Center',
           address: f.address || 'Address not available',
-          url: f.url || '#',
+          url: normalizeFacilityUrl(f.url) || '#',
           notes: f.notes || '',
+          email: typeof f.email === 'string' ? f.email : '',
+      phone: typeof f.phone === 'string' ? f.phone : '',
+      hours: typeof f.hours === 'string' ? f.hours : '',
         }))
       : [];
 
