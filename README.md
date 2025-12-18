@@ -16,8 +16,11 @@ The application is deployed on Railway and ready to use. Upload an image, enter 
 - **RAG-Enhanced Regulations**: Uses Retrieval-Augmented Generation (RAG) to provide accurate, location-specific recycling regulations from official sources
 - **Local Facilities**: Find nearby recycling and disposal facilities using web search
 - **Interactive Map**: View facilities on an interactive Mapbox map with markers and geocoding
+- **Location Autocomplete**: Location input supports typeahead suggestions and “use my current location” (Mapbox Geocoding + browser geolocation)
+- **FAQ Page**: “Common Questions” page accessible from the navbar
 - **Clear Instructions**: Receive step-by-step guidance for proper disposal
 - **Real-time Progress**: Visual feedback during analysis stages
+- **Grounded Source Links**: Web source URLs are extracted from OpenAI Responses API citations/tool output (to reduce hallucinated links)
 
 ## Tech Stack
 
@@ -25,8 +28,8 @@ The application is deployed on Railway and ready to use. Upload an image, enter 
 - **Backend**: Node.js + Express + TypeScript
 - **RAG Service**: Python + FastAPI + LlamaIndex for querying local recycling regulations
 - **AI Services**: 
-  - OpenAI Responses API (GPT-4.1) with web search for recyclability assessment and chat
-  - OpenAI Responses API (GPT-4.1) for image analysis
+  - OpenAI **Chat Completions** (vision) for image analysis
+  - OpenAI **Responses API** (GPT-4.1) with web search for recyclability assessment and chat
 - **Maps**: Mapbox GL JS + Mapbox Geocoding API
 - **Deployment**: Railway (with Nixpacks builder)
 
@@ -71,17 +74,17 @@ flowchart TB
 
 ## Project Structure
 
-The project is organized within an `app/` directory structure:
+The project is organized at the repository root (no `app/` folder):
 
 ```mermaid
 graph TD
-    APP[app/]
+    ROOT[repo root]
     
-    APP --> SRC[src/]
-    APP --> SERVER[server/]
-    APP --> RAG_SERVICE[rag_service/]
-    APP --> RAG_DATA[rag/]
-    APP --> CONFIG[Config Files]
+    ROOT --> SRC[src/]
+    ROOT --> SERVER[server/]
+    ROOT --> RAG_SERVICE[rag_service/]
+    ROOT --> RAG_DATA[rag/]
+    ROOT --> CONFIG[Config Files]
     
     SRC --> COMPONENTS[components/]
     SRC --> HOOKS[hooks/]
@@ -95,11 +98,16 @@ graph TD
     COMPONENTS --> MAP[FacilityMap.tsx]
     COMPONENTS --> CARD[FacilityCard.tsx]
     COMPONENTS --> HOW[HowItWorks.tsx]
+    COMPONENTS --> FAQ[FAQ.tsx]
+    COMPONENTS --> LOC_AUTO[LocationAutocomplete.tsx]
     
     HOOKS --> ANALYZE_HOOK[useAnalyzeItem.ts]
+    HOOKS --> LOC_HOOK[useLocationAutocomplete.ts]
     
     UTILS --> API_UTILS[api.ts]
     UTILS --> GEO_UTILS[geocoding.ts]
+    SRC --> SERVICES_UI[src/services/]
+    SERVICES_UI --> LOC_SVC[locationService.ts]
     
     SERVER --> ROUTES[routes/]
     SERVER --> SERVICES[services/]
@@ -124,7 +132,7 @@ graph TD
     CONFIG --> TS_CONFIG[tsconfig.json]
     CONFIG --> RAILWAY[railway.json]
     
-    style APP fill:#e1f5ff
+    style ROOT fill:#e1f5ff
     style SRC fill:#fff4e1
     style SERVER fill:#ffe1f5
     style RAG_SERVICE fill:#e1ffe1
@@ -134,7 +142,7 @@ graph TD
 ### Directory Structure
 
 ```
-app/
+.
 ├── src/                          # React frontend source
 │   ├── components/              # React components
 │   │   ├── ImageUpload.tsx      # Image upload with drag & drop
@@ -144,6 +152,8 @@ app/
 │   │   └── HowItWorks.tsx      # How it works page
 │   ├── hooks/                   # React hooks
 │   │   └── useAnalyzeItem.ts    # Analysis state management
+│   ├── services/                # Frontend services (Mapbox autocomplete)
+│   │   └── locationService.ts
 │   ├── utils/                   # Utility functions
 │   │   ├── api.ts               # API client functions
 │   │   └── geocoding.ts         # Mapbox geocoding utilities
@@ -206,9 +216,10 @@ sequenceDiagram
     
     Backend->>OpenAI: Analyze recyclability (GPT-4.1 + web search)
     Note over OpenAI: Uses RAG context +<br/>web search for facilities
-    OpenAI-->>Backend: Recyclability + facilities
+    OpenAI-->>Backend: Recyclability + facilities + url_citations
     
     Backend-->>Frontend: Complete analysis result
+    Note over Backend: Web sources are grounded from<br/>Responses API url_citation/tool output
     
     Frontend->>Mapbox: Geocode facility addresses
     Mapbox-->>Frontend: Coordinates
@@ -253,6 +264,7 @@ sequenceDiagram
      - Reasoning explanation
      - Nearby facilities (3-5) via web search
    - Returns structured JSON response
+   - **Web sources**: `webSearchSources` are derived from Responses API citations/tool output when available (to reduce hallucinations)
 
 5. **Geocoding** (`geocoding.ts`)
    - Frontend geocodes facility addresses using Mapbox Geocoding API
@@ -345,12 +357,15 @@ In Railway project dashboard → **Variables** tab, add:
 OPENAI_API_KEY=sk-your-actual-api-key-here
 VITE_MAPBOX_ACCESS_TOKEN=pk.your-mapbox-token-here
 NODE_ENV=production
-PORT=3001
-RAG_SERVICE_URL=http://your-rag-service-url:8001  # Optional, if deploying RAG separately
+# Railway sets PORT automatically for the Node service
+# If you deploy rag_service separately, point the backend to it:
+RAG_SERVICE_URL=https://your-rag-service.up.railway.app
+# Optional: increase if your RAG service cold-starts slowly
+RAG_TIMEOUT_MS=30000
 ```
 
 **Notes:**
-- Railway automatically sets `PORT` - don't override unless necessary
+- Railway automatically sets `PORT` for the Node service
 - `VITE_MAPBOX_ACCESS_TOKEN` requires `VITE_` prefix for frontend access
 - `RAG_SERVICE_URL` is optional - app works without RAG service
 
@@ -388,7 +403,7 @@ Railway uses `railway.json` for build settings:
 The RAG service can be deployed as a separate Railway service:
 
 1. **Create New Service** in Railway project
-2. **Set Root Directory** to `app/rag_service/`
+2. **Set Root Directory** to `rag_service/`
 3. **Environment Variables:**
    ```bash
    OPENAI_API_KEY=sk-your-actual-api-key-here
@@ -423,21 +438,20 @@ The RAG service can be deployed as a separate Railway service:
 1. **Install Backend Dependencies**
 
 ```bash
-cd app
 npm install
 ```
 
 2. **Install RAG Service Dependencies**
 
 ```bash
-cd app/rag_service
+cd rag_service
 pip install -r requirements.txt
-cd ../..
+cd ..
 ```
 
 3. **Configure Environment Variables**
 
-Create `app/.env` file in the project root:
+Create `.env` file in the project root:
 
 ```bash
 OPENAI_API_KEY=sk-your-actual-api-key-here
@@ -445,6 +459,7 @@ VITE_MAPBOX_ACCESS_TOKEN=pk.your-mapbox-token-here
 PORT=3001
 NODE_ENV=development
 RAG_SERVICE_URL=http://localhost:8001
+RAG_TIMEOUT_MS=30000
 ```
 
 **Notes:**
@@ -459,7 +474,6 @@ You need to run three services: the frontend dev server, backend API server, and
 **Terminal 1 - Frontend Dev Server:**
 
 ```bash
-cd app
 npm run dev
 ```
 
@@ -468,7 +482,6 @@ This starts the Vite dev server on `http://localhost:5173` (frontend)
 **Terminal 2 - Backend API Server:**
 
 ```bash
-cd app
 npm run server
 ```
 
@@ -477,7 +490,7 @@ This starts the Express API server on `http://localhost:3001` (backend)
 **Terminal 3 - RAG Service (optional):**
 
 ```bash
-cd app/rag_service
+cd rag_service
 uvicorn app:app --host 0.0.0.0 --port 8001
 ```
 
@@ -548,7 +561,10 @@ Main analysis endpoint that performs complete item analysis.
       "type": "Recycling Center",
       "address": "123 Main St, Ithaca, NY",
       "url": "https://example.com",
-      "notes": "Accepts plastic containers"
+      "notes": "Accepts plastic containers",
+      "email": "",
+      "phone": "",
+      "hours": ""
     }
   ],
   "ragSources": ["https://example.com/regulations"],
@@ -581,7 +597,7 @@ Health check endpoint.
 
 ### Backend won't start
 
-- Check that `OPENAI_API_KEY` is set in `app/.env`
+- Check that `OPENAI_API_KEY` is set in `.env`
 - Ensure port 3001 is not in use (or change `PORT` in `.env`)
 - Check console for error messages
 - Verify Node.js version: `node --version` (should be 18+)
@@ -594,8 +610,8 @@ Health check endpoint.
 
 ### RAG service won't start
 
-- Check that `app/rag_service/rag_index_morechunked/` directory exists with vector store files
-- Verify Python dependencies: `pip install -r app/rag_service/requirements.txt`
+- Check that `rag_service/rag_index_morechunked/` directory exists with vector store files
+- Verify Python dependencies: `pip install -r rag_service/requirements.txt`
 - Ensure port 8001 is not in use (or change `PORT` in environment)
 - Check console for error messages about missing vector store files
 - Verify `OPENAI_API_KEY` is set (required for embeddings)
@@ -603,9 +619,9 @@ Health check endpoint.
 ### RAG queries not working
 
 - Ensure the RAG service is running on port 8001
-- Check that `RAG_SERVICE_URL` in `app/.env` matches the RAG service URL
+- Check that `RAG_SERVICE_URL` in `.env` matches the RAG service URL
 - Verify RAG service is accessible: `curl http://localhost:8001/health`
-- Check that `app/rag_service/rag_index_morechunked/` directory exists with all vector store files
+- Check that `rag_service/rag_index_morechunked/` directory exists with all vector store files
 - Review RAG service logs for errors
 - **Note**: App continues to work without RAG - it's optional
 
@@ -636,22 +652,21 @@ Health check endpoint.
 ### Project Setup
 
 1. Clone the repository
-2. Navigate to `app/` directory
-3. Install dependencies: `npm install`
-4. Install RAG service dependencies: `cd rag_service && pip install -r requirements.txt`
+2. Install dependencies: `npm install`
+3. Install RAG service dependencies: `cd rag_service && pip install -r requirements.txt`
 5. Copy `env.example` to `.env` and configure
 6. Start development servers
 
 ### Code Structure
 
-- **Frontend**: React components in `app/src/components/`, hooks in `app/src/hooks/`
-- **Backend**: Express routes in `app/server/routes/`, services in `app/server/services/`
-- **RAG Service**: FastAPI app in `app/rag_service/app.py`, query logic in `app/rag_service/rag_query.py`
+- **Frontend**: React components in `src/components/`, hooks in `src/hooks/`
+- **Backend**: Express routes in `server/routes/`, services in `server/services/`
+- **RAG Service**: FastAPI app in `rag_service/app.py`, query logic in `rag_service/rag_query.py`
 
 ### TypeScript
 
-- Frontend types: `app/src/types/recycleiq.ts`
-- Backend types: `app/server/types.ts`
+- Frontend types: `src/types/recycleiq.ts`
+- Backend types: `server/types.ts`
 - Shared types should be kept in sync
 
 ### Testing
@@ -660,14 +675,3 @@ Health check endpoint.
 - API testing: Use `curl` or Postman to test endpoints
 - RAG testing: Check RAG service logs and `/debug` endpoint
 
-### Contributing
-
-1. Create a feature branch
-2. Make changes with clear commit messages
-3. Test locally before submitting
-4. Ensure TypeScript compiles without errors
-5. Update documentation if needed
-
-## License
-
-© 2025 RecycLens. Making recycling simple.
