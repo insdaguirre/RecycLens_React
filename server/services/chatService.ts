@@ -2,6 +2,86 @@ import OpenAI from 'openai';
 import { queryRAG } from './ragService.js';
 import type { ChatMessage, ChatContext } from '../types.js';
 
+function normalizeHttpUrl(url: string): string | null {
+  if (typeof url !== 'string') return null;
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+    return parsed.href;
+  } catch {
+    return null;
+  }
+}
+
+function extractWebSearchUrlsFromResponse(response: any): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+
+  const addUrl = (u: unknown) => {
+    if (typeof u !== 'string') return;
+    const normalized = normalizeHttpUrl(u);
+    if (!normalized) return;
+    if (seen.has(normalized)) return;
+    seen.add(normalized);
+    out.push(normalized);
+  };
+
+  const addFromResults = (results: any) => {
+    if (!Array.isArray(results)) return;
+    for (const r of results) {
+      addUrl(r?.url);
+    }
+  };
+
+  // Primary: Responses API structured output items
+  const output = (response as any)?.output;
+  if (Array.isArray(output)) {
+    for (const item of output) {
+      const type = String(item?.type || '');
+      // Common shapes:
+      // - { type: 'web_search_call', results: [{ url, ...}] }
+      // - { type: 'web_search', web_search_results: [{ url, ...}] }
+      if (type.includes('web_search')) {
+        addFromResults(item?.results);
+        addFromResults(item?.web_search_results);
+        addFromResults(item?.result?.results);
+      }
+      // Some SDKs may wrap tool output under a generic tool item
+      if (item?.tool_name === 'web_search' || item?.name === 'web_search') {
+        addFromResults(item?.results);
+        addFromResults(item?.web_search_results);
+        addFromResults(item?.result?.results);
+      }
+
+      // Responses API often returns citations on the message output (ground-truth URLs)
+      if (type === 'message' && Array.isArray(item?.content)) {
+        for (const contentItem of item.content) {
+          if (!Array.isArray(contentItem?.annotations)) continue;
+          for (const ann of contentItem.annotations) {
+            if (ann?.type === 'url_citation' && ann?.url) {
+              addUrl(ann.url);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Fallback: legacy/undocumented field used by older code paths
+  if (out.length === 0 && Array.isArray((response as any)?.tools_used)) {
+    for (const tool of (response as any).tools_used) {
+      if (tool?.type === 'web_search') {
+        addFromResults(tool?.web_search_results);
+        addFromResults(tool?.results);
+      }
+    }
+  }
+
+  return out;
+}
+
 // Lazy initialization of OpenAI client
 function getOpenAIClient() {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -123,32 +203,21 @@ Your role:
       input: input,
       tools: [
         {
-          type: 'web_search' as const,
+          // Use web search tool for grounded citations.
+          // Cast to any to avoid SDK type drift across versions.
+          type: 'web_search' as any,
           user_location: userLocation,
         },
       ],
-    });
+    } as any);
     
     const outputText = response.output_text || '';
     if (!outputText) {
       throw new Error('No response from chat API');
     }
     
-    // Extract web search sources if available
-    // Note: Responses API may include sources in tools_used or we may need to parse from response
-    const webSources: string[] = [];
-    if ((response as any).tools_used) {
-      const toolsUsed = (response as any).tools_used;
-      for (const tool of toolsUsed) {
-        if (tool.type === 'web_search' && tool.web_search_results) {
-          for (const result of tool.web_search_results) {
-            if (result.url) {
-              webSources.push(result.url);
-            }
-          }
-        }
-      }
-    }
+    // Ground web sources from the actual web_search tool results (avoid hallucinated URLs)
+    const webSources = extractWebSearchUrlsFromResponse(response);
     
     return {
       response: outputText,

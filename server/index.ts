@@ -11,7 +11,7 @@ import chatRouter from './routes/chat.js';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = Number(process.env.PORT) || 3001;
 
 // Get directory paths for serving static files
 const __filename = fileURLToPath(import.meta.url);
@@ -33,7 +33,7 @@ app.use('/api/analyze', analyzeRouter);
 app.use('/api/chat', chatRouter);
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
@@ -56,7 +56,7 @@ if (isProduction && existsSync(distPath)) {
 }
 
 // Error handling middleware
-app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('Unhandled error:', err);
   res.status(500).json({
     error: 'Internal server error',

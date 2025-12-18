@@ -100,6 +100,82 @@ function stripLinksFromArray(arr: any): string[] {
   return arr.map(item => stripLinks(String(item)));
 }
 
+function normalizeHttpUrl(url: string): string | null {
+  if (typeof url !== 'string') return null;
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+    return parsed.href;
+  } catch {
+    return null;
+  }
+}
+
+function extractWebSearchUrlsFromResponse(response: any): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+
+  const addUrl = (u: unknown) => {
+    if (typeof u !== 'string') return;
+    const normalized = normalizeHttpUrl(u);
+    if (!normalized) return;
+    if (seen.has(normalized)) return;
+    seen.add(normalized);
+    out.push(normalized);
+  };
+
+  const addFromResults = (results: any) => {
+    if (!Array.isArray(results)) return;
+    for (const r of results) {
+      addUrl(r?.url);
+    }
+  };
+
+  // Primary: Responses API structured output items
+  const output = (response as any)?.output;
+  if (Array.isArray(output)) {
+    for (const item of output) {
+      const type = String(item?.type || '');
+      if (type.includes('web_search')) {
+        addFromResults(item?.results);
+        addFromResults(item?.web_search_results);
+        addFromResults(item?.result?.results);
+      }
+      if (item?.tool_name === 'web_search' || item?.name === 'web_search') {
+        addFromResults(item?.results);
+        addFromResults(item?.web_search_results);
+        addFromResults(item?.result?.results);
+      }
+
+      // Responses API often returns citations on the message output (ground-truth URLs)
+      if (type === 'message' && Array.isArray(item?.content)) {
+        for (const contentItem of item.content) {
+          if (!Array.isArray(contentItem?.annotations)) continue;
+          for (const ann of contentItem.annotations) {
+            if (ann?.type === 'url_citation' && ann?.url) {
+              addUrl(ann.url);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Fallback: legacy/undocumented field used by older code paths
+  if (out.length === 0 && Array.isArray((response as any)?.tools_used)) {
+    for (const tool of (response as any).tools_used) {
+      if (tool?.type === 'web_search') {
+        addFromResults(tool?.web_search_results);
+        addFromResults(tool?.results);
+      }
+    }
+  }
+
+  return out;
+}
+
 /**
  * Analyzes recyclability using Responses API with web search for facilities
  */
@@ -309,12 +385,18 @@ For the last three fields in "facilities", try to find each facility's contact i
 
     const parsed = extractJSONFromResponse(outputText);
 
-    const webSearchSources: string[] = Array.isArray(parsed.webSearchSources)
+    // Ground web sources from the actual web_search tool results (avoid hallucinated URLs).
+    const webSearchSourcesFromTools = extractWebSearchUrlsFromResponse(response);
+
+    const webSearchSourcesFromModel: string[] = Array.isArray(parsed.webSearchSources)
       ? parsed.webSearchSources
         .filter((u: any) => typeof u === 'string')
         .map((u: string) => u.trim())
         .filter((u: string) => u.length > 0)
       : [];
+
+    const webSearchSources =
+      webSearchSourcesFromTools.length > 0 ? webSearchSourcesFromTools : webSearchSourcesFromModel;
 
     // Sanitize ALL user-visible strings here (single source of truth)
     const sanitizedFacilities: Facility[] = Array.isArray(parsed.facilities)
