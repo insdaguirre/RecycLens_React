@@ -339,7 +339,10 @@ const RecycLens = () => {
         </div>
 
         {/* Mobile Mockup */}
-        <div className="mt-20 flex justify-center">
+        <div className="mt-20 flex flex-col items-center">
+          <p className="mb-4 text-sm font-light tracking-wide text-gray-500 uppercase">
+            Coming soon
+          </p>
           <div className="bg-gray-900 rounded-[3rem] p-3 shadow-2xl">
             <div className="bg-white rounded-[2.5rem] w-80 h-[42rem] overflow-hidden relative">
               {/* Mobile Status Bar */}
