@@ -39,7 +39,8 @@ export default function ChatPage({ initialContext, onBack }: ChatPageProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      <div className="max-w-4xl mx-auto px-6 py-8">
+      {/* Add top padding to clear the sticky navbar */}
+      <div className="max-w-4xl mx-auto px-6 pt-24 pb-8">
         {/* Header */}
         <div className="mb-6 flex items-center gap-4">
           {onBack && (
